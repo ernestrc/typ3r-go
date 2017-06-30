@@ -1,6 +1,7 @@
 package typ3r
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/user"
@@ -10,6 +11,9 @@ import (
 )
 
 const confFile = ".typ3rrc"
+const tokenKey = "token"
+const serverURLKey = "url"
+const userKey = "user"
 
 const rootSection = ""
 const defaultURL = "https://typ3r.com/api/index.php"
@@ -69,25 +73,94 @@ func getConfig(sectionName string, file *ini.File, keyName string) (cfg string, 
 	return
 }
 
+func gatherConfig(file *ini.File) error {
+	const n = 3
+	var err error
+	var global *ini.Section
+	var line []byte
+
+	if global, err = file.GetSection(""); err != nil {
+		return err
+	}
+
+	k := [n]string{serverURLKey, tokenKey, userKey}
+	d := [n]string{defaultURL, "", "token"}
+	q := [n]string{
+		"What typ3r server do you want to use?",
+		"What's your session token? If you don't have one create one by visiting https://typ3r.com/api/index.php/createtoken with your browser",
+		"What's your user name?",
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	for i, question := range q {
+		fmt.Print(question)
+		if d[i] != "" {
+			fmt.Printf(" (default=%s): ", d[i])
+		} else {
+			fmt.Print(": ")
+		}
+		if line, _, err = reader.ReadLine(); err != nil {
+			return err
+		}
+		a := string(line)
+		if a != "" {
+			d[i] = a
+		}
+		if _, err = global.NewKey(k[i], d[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func newConfigFile() (file *ini.File, err error) {
+	file = ini.Empty()
+
+	if err = gatherConfig(file); err != nil {
+		return
+	}
+
+	if err = file.SaveTo(confPath); err != nil {
+		return
+	}
+
+	return file, nil
+}
+
 // Load loads a typ3r's client user configuration
 func Load() (cfg *Config, err error) {
 	var parsed *ini.File
+	var created = false
 
-	if parsed, err = ini.Load(confPath); err != nil {
+	// create if config doesn't exist
+	if _, err = os.Stat(confPath); err != nil {
+		created = true
+		if parsed, err = newConfigFile(); err != nil {
+			return
+		}
+	} else if parsed, err = ini.Load(confPath); err != nil {
 		return
 	}
 
 	cfg = new(Config)
 
-	cfg.serverURL = getOption(rootSection, parsed, "url", defaultURL)
+	cfg.serverURL = getOption(rootSection, parsed, serverURLKey, defaultURL)
 
-	if (*cfg).token, err = getConfig(rootSection, parsed, "token"); err != nil {
-		return
+	if (*cfg).token, err = getConfig(rootSection, parsed, tokenKey); err != nil {
+		goto clean
 	}
 
-	if cfg.user, err = getConfig(rootSection, parsed, "user"); err != nil {
-		return
+	if cfg.user, err = getConfig(rootSection, parsed, userKey); err != nil {
+		goto clean
 	}
 
 	return cfg, nil
+
+clean:
+	if created {
+		os.Remove(confPath)
+	}
+	return nil, err
 }
