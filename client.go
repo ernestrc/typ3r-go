@@ -3,16 +3,19 @@ package typ3r
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"strings"
 )
 
-// TPClient represents a typ3r client
-type TPClient struct {
+// Client represents a typ3r client
+type Client struct {
 	Config *Config
 }
 
-func (c *TPClient) request(method string, path string) (body []byte, err error) {
+func (c *Client) request(method string, path string, data io.Reader) (body []byte, err error) {
 	var req *http.Request
 	var resp *http.Response
 	var buf []byte
@@ -20,7 +23,7 @@ func (c *TPClient) request(method string, path string) (body []byte, err error) 
 	url := c.Config.serverURL + path
 	client := &http.Client{}
 
-	if req, err = http.NewRequest(method, url, nil); err != nil {
+	if req, err = http.NewRequest(method, url, data); err != nil {
 		return
 	}
 
@@ -36,7 +39,7 @@ func (c *TPClient) request(method string, path string) (body []byte, err error) 
 		err = fmt.Errorf(fmt.Sprintf("access denied to user %s with token %s", c.Config.user, c.Config.token))
 		return
 	default:
-		err = fmt.Errorf(fmt.Sprintf("error: %v", resp))
+		err = fmt.Errorf(fmt.Sprintf("error: %+v\nrequest: %+v", resp, req))
 		return
 	}
 
@@ -48,10 +51,15 @@ func (c *TPClient) request(method string, path string) (body []byte, err error) 
 }
 
 // ListNotes will return a list of the user notes
-func (c *TPClient) ListNotes() (notes Notes, err error) {
+func (c *Client) ListNotes(offset int, limit int, query string) (notes Notes, err error) {
 	var buf []byte
+	path := fmt.Sprintf("/notes?limit=%d&offset=%d", limit, offset)
 
-	if buf, err = c.request("GET", "/notes"); err != nil {
+	if query != "" {
+		path += "&query=" + query
+	}
+
+	if buf, err = c.request("GET", path, nil); err != nil {
 		return
 	}
 
@@ -60,4 +68,36 @@ func (c *TPClient) ListNotes() (notes Notes, err error) {
 	}
 
 	return notes, nil
+}
+
+func (c *Client) NewNote(text string) (*Note, error) {
+	reader := strings.NewReader(fmt.Sprintf("{\"note\":\"%s\"}", text))
+
+	var err error
+	var buf []byte
+	if buf, err = c.request("POST", "/notes", reader); err != nil {
+		return nil, err
+	}
+
+	var note Note
+	if err = json.Unmarshal(buf, &note); err != nil {
+		return nil, err
+	}
+
+	return &note, nil
+}
+
+func (c *Client) UpdateNote(id int, text string) error {
+	var buf []byte
+	var err error
+	reader := strings.NewReader(text)
+	path := fmt.Sprintf("/notes/%d", id)
+
+	if buf, err = c.request("POST", path, reader); err != nil {
+		return err
+	}
+
+	log.Println(string(buf))
+
+	return nil
 }
