@@ -89,7 +89,7 @@ func ls(client *typ3r.Client) error {
 		return err
 	}
 
-	if err = less.Init(nil, nil); err != nil {
+	if err = less.Init(nil, ""); err != nil {
 		return err
 	}
 
