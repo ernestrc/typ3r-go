@@ -5,16 +5,15 @@ SRC=$(wildcard **/*.go)
 TESTDIR=test
 EXECDIR=cli
 EXEC=typ3r-cli
+EXEC_SRC=$(EXECDIR)/main.go
 
 default: $(EXEC)
 
-$(EXEC): $(EXECDIR)/main.go $(SRC)
-	cd $(EXECDIR) && $(CC) $(CFLAGS) -o ../$(EXEC)
-
 .PHONY: clean test
 
-test:
-	@ cd $(TESTDIR) && $(CC) $(TFLAGS)
+$(EXEC): $(EXEC_SRC) $(SRC)
+	@ find . -name \*.go | xargs cat | grep github.com | awk -F'"' '{print $$2}' | sort | uniq | xargs -L1 go get
+	cd $(EXECDIR) && $(CC) $(CFLAGS) -o ../$(EXEC)
 
 clean:
 	@- rm $(EXEC)
