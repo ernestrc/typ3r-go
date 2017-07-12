@@ -3,8 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"strings"
 	"text/tabwriter"
+	"time"
 
+	"github.com/ararog/timeago"
 	"github.com/ernestrc/less"
 	typ3r "github.com/ernestrc/typ3r-go"
 )
@@ -12,19 +16,31 @@ import (
 var nextOffset int = 0
 var notes []typ3r.Note
 
-const fetchSize = 10
+const fetchSize = 1
+
+func tabs(n *typ3r.Note) string {
+	limit := int(math.Min(float64(len(n.Text)), 40))
+	summary := "\"" + strings.Replace(n.Text[0:limit], "\n", " ", -1) + "\""
+
+	got, err := timeago.TimeAgoFromNowWithTime(time.Time(n.Ts))
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%s\t%s\t%d\t%d\t%s", summary, n.Visits,
+		len(n.Tasks), len(n.Snippets), got)
+}
 
 func stringify(notes []typ3r.Note) string {
 	var err error
 	buf := new(bytes.Buffer)
 	w := tabwriter.NewWriter(buf, 0, 0, 4, ' ', 0)
 
-	if _, err = fmt.Fprintln(w, "id\tcard\tvisits\ttasks\tsnippets\ttext\tupdated_at"); err != nil {
+	if _, err = fmt.Fprintln(w, "text\tvisits\ttasks\tsnippets\tupdated_at"); err != nil {
 		panic(err)
 	}
 
 	for _, n := range notes {
-		if _, err = fmt.Fprintln(w, n.Tabs()); err != nil {
+		if _, err = fmt.Fprintln(w, tabs(&n)); err != nil {
 			panic(err)
 		}
 	}
