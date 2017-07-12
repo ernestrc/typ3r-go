@@ -1,11 +1,9 @@
 package typ3r
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"strings"
-	"text/tabwriter"
 	"time"
 )
 
@@ -34,28 +32,6 @@ type Note struct {
 	Snippets []Snippet `json:"snippets"`
 }
 
-// Notes is simply a slice of Note
-type Notes []Note
-
-func (ln Notes) String() string {
-	var err error
-	buf := new(bytes.Buffer)
-	w := tabwriter.NewWriter(buf, 0, 0, 4, ' ', 0)
-
-	if _, err = fmt.Fprintln(w, "id\tcard\tvisits\ttasks\tsnippets\ttext\tupdated_at"); err != nil {
-		panic(err)
-	}
-
-	for _, n := range ln {
-		if _, err = fmt.Fprintln(w, n.tabs()); err != nil {
-			panic(err)
-		}
-	}
-
-	w.Flush()
-	return buf.String()
-}
-
 func (ct *Timestamp) UnmarshalJSON(b []byte) (err error) {
 	var t time.Time
 	normalized := strings.Join(strings.Split(strings.Trim(string(b), "\""), " "), "T") + "Z"
@@ -64,7 +40,7 @@ func (ct *Timestamp) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func (n Note) tabs() string {
+func (n Note) Tabs() string {
 	limit := int(math.Min(float64(len(n.Text)), 10))
 	summary := "\"" + strings.Replace(n.Text[0:limit], "\n", " ", -1) + "\""
 	return fmt.Sprintf("%s\t%s\t%s\t%d\t%d\t%s\t%s",

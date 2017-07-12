@@ -1,10 +1,10 @@
 CC=go
 CFLAGS=build
 TFLAGS=test
-SRC=$(wildcard *.go)
+SRC=$(wildcard **/*.go)
 TESTDIR=test
-EXECDIR=bin
-EXEC=$(EXECDIR)/typ3r
+EXECDIR=cli
+EXEC=typ3r-cli
 
 default: $(EXEC)
 
@@ -17,4 +17,4 @@ test:
 	@ cd $(TESTDIR) && $(CC) $(TFLAGS)
 
 clean:
-	@- rm -f $(EXEC)
+	@- rm $(EXEC)

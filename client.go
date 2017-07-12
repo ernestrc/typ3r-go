@@ -51,7 +51,7 @@ func (c *Client) request(method string, path string, data io.Reader) (body []byt
 }
 
 // ListNotes will return a list of the user notes
-func (c *Client) ListNotes(offset int, limit int, query string) (notes Notes, err error) {
+func (c *Client) ListNotes(offset int, limit int, query string) (notes []Note, err error) {
 	var buf []byte
 	path := fmt.Sprintf("/notes?limit=%d&offset=%d", limit, offset)
 
