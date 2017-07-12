@@ -129,8 +129,8 @@ func newConfigFile() (file *ini.File, err error) {
 	return file, nil
 }
 
-// Load loads a typ3r's client user configuration
-func Load() (cfg *Config, err error) {
+// LoadConfig loads a typ3r's client user configuration
+func LoadConfig() (cfg *Config, err error) {
 	var parsed *ini.File
 	var created = false
 

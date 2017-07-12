@@ -8,13 +8,12 @@ import (
 	typ3r "github.com/ernestrc/typ3r-go"
 )
 
-func main() {
-	var err error
-	var args map[string]interface{}
-	var config *typ3r.Config
-	var client typ3r.Client
-
-	usage := `Typ3r Client
+var (
+	err    error
+	args   map[string]interface{}
+	config *typ3r.Config
+	client typ3r.Client
+	usage  = `Typ3r Client
 
 Usage:
   typ3r ls
@@ -24,12 +23,15 @@ Usage:
 
 Options:
   -h --help     Show this screen.`
+)
+
+func main() {
 
 	if args, err = docopt.Parse(usage, nil, true, "typ3r CLI", false); err != nil {
 		goto exit
 	}
 
-	if config, err = typ3r.Load(); err != nil {
+	if config, err = typ3r.LoadConfig(); err != nil {
 		goto exit
 	}
 

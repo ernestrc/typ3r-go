@@ -15,7 +15,13 @@ import (
 
 const fetchSize = 10
 
-func tabs(n *typ3r.Note) string {
+var (
+	nextOffset int
+	notes      []typ3r.Note
+	search     string
+)
+
+func toRow(n *typ3r.Note) string {
 	limit := int(math.Min(float64(len(n.Text)), 40))
 	summary := "\"" + strings.Replace(n.Text[0:limit], "\n", " ", -1) + "\""
 
@@ -27,7 +33,7 @@ func tabs(n *typ3r.Note) string {
 		len(n.Tasks), len(n.Snippets), got)
 }
 
-func stringify(notes []typ3r.Note) string {
+func toTable(notes []typ3r.Note) string {
 	var err error
 	buf := new(bytes.Buffer)
 	w := tabwriter.NewWriter(buf, 0, 0, 4, ' ', 0)
@@ -37,7 +43,7 @@ func stringify(notes []typ3r.Note) string {
 	}
 
 	for _, n := range notes {
-		if _, err = fmt.Fprintln(w, tabs(&n)); err != nil {
+		if _, err = fmt.Fprintln(w, toRow(&n)); err != nil {
 			panic(err)
 		}
 	}
@@ -49,7 +55,7 @@ func stringify(notes []typ3r.Note) string {
 	return buf.String()
 }
 
-func next(client *typ3r.Client, search string) (n int, err error) {
+func getNotes(client *typ3r.Client) (n int, err error) {
 	var batch []typ3r.Note
 
 	if nextOffset == -1 {
@@ -75,15 +81,11 @@ func next(client *typ3r.Client, search string) (n int, err error) {
 	return
 }
 
-var nextOffset int
-var notes []typ3r.Note
-var search string
-
 func ls(client *typ3r.Client) error {
 	var err error
 	var n int
 
-	if n, err = next(client, search); err != nil {
+	if n, err = getNotes(client); err != nil {
 		return err
 	}
 
@@ -96,7 +98,7 @@ func ls(client *typ3r.Client) error {
 	for {
 
 		if n != 0 {
-			less.Content(stringify(notes))
+			less.Content(toTable(notes))
 		}
 
 		less.Message(fmt.Sprintf("%d notes", len(notes)))
@@ -104,7 +106,7 @@ func ls(client *typ3r.Client) error {
 		ev := less.PollEvent()
 		switch ev.Type {
 		case less.EOF:
-			n, err = next(client, search)
+			n, err = getNotes(client)
 		case less.Exit:
 			return nil
 		case less.Search:
@@ -112,7 +114,7 @@ func ls(client *typ3r.Client) error {
 			notes = notes[:0]
 			search = string(ev.Data)
 			less.Message(fmt.Sprintf("searching %s", search))
-			n, err = next(client, search)
+			n, err = getNotes(client)
 		case less.Error:
 			err = ev.Err
 		}
