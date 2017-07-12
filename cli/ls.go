@@ -13,10 +13,7 @@ import (
 	typ3r "github.com/ernestrc/typ3r-go"
 )
 
-var nextOffset int = 0
-var notes []typ3r.Note
-
-const fetchSize = 1
+const fetchSize = 10
 
 func tabs(n *typ3r.Note) string {
 	limit := int(math.Min(float64(len(n.Text)), 40))
@@ -45,18 +42,21 @@ func stringify(notes []typ3r.Note) string {
 		}
 	}
 
-	w.Flush()
+	if err = w.Flush(); err != nil {
+		panic(err)
+	}
+
 	return buf.String()
 }
 
-func next(client *typ3r.Client) (n int, err error) {
+func next(client *typ3r.Client, search string) (n int, err error) {
 	var batch []typ3r.Note
 
 	if nextOffset == -1 {
 		return 0, nil
 	}
 
-	if batch, err = client.ListNotes(nextOffset, fetchSize, ""); err != nil {
+	if batch, err = client.ListNotes(nextOffset, fetchSize, search); err != nil {
 		return 0, err
 	}
 
@@ -75,11 +75,15 @@ func next(client *typ3r.Client) (n int, err error) {
 	return
 }
 
+var nextOffset int
+var notes []typ3r.Note
+var search string
+
 func ls(client *typ3r.Client) error {
 	var err error
 	var n int
 
-	if n, err = next(client); err != nil {
+	if n, err = next(client, search); err != nil {
 		return err
 	}
 
@@ -93,17 +97,22 @@ func ls(client *typ3r.Client) error {
 
 		if n != 0 {
 			less.Content(stringify(notes))
-			less.Message(fmt.Sprintf("%d notes", len(notes)))
 		}
+
+		less.Message(fmt.Sprintf("%d notes", len(notes)))
 
 		ev := less.PollEvent()
 		switch ev.Type {
 		case less.EOF:
-			n, err = next(client)
+			n, err = next(client, search)
 		case less.Exit:
 			return nil
 		case less.Search:
-			// TODO call search
+			nextOffset = 0
+			notes = notes[:0]
+			search = string(ev.Data)
+			less.Message(fmt.Sprintf("searching %s", search))
+			n, err = next(client, search)
 		case less.Error:
 			err = ev.Err
 		}
