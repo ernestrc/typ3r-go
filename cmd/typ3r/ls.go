@@ -96,7 +96,6 @@ func ls(client *typ3r.Client) error {
 	defer less.Close()
 
 	for {
-
 		if n != 0 {
 			less.Content(toTable(notes))
 		}
