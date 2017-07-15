@@ -3,13 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"math"
-	"strings"
-	"text/tabwriter"
-	"time"
+	"text/template"
 
-	"github.com/ararog/timeago"
-	"github.com/ernestrc/less"
+	lessCfg "github.com/ernestrc/fractal/config"
+	"github.com/ernestrc/fractal/less"
 	typ3r "github.com/ernestrc/typ3r-go"
 )
 
@@ -20,40 +17,6 @@ var (
 	notes      []typ3r.Note
 	search     string
 )
-
-func toRow(n *typ3r.Note) string {
-	limit := int(math.Min(float64(len(n.Text)), 40))
-	summary := "\"" + strings.Replace(n.Text[0:limit], "\n", " ", -1) + "\""
-
-	got, err := timeago.TimeAgoFromNowWithTime(time.Time(n.Ts))
-	if err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf("%s\t%s\t%d\t%d\t%s", summary, n.Visits,
-		len(n.Tasks), len(n.Snippets), got)
-}
-
-func toTable(notes []typ3r.Note) string {
-	var err error
-	buf := new(bytes.Buffer)
-	w := tabwriter.NewWriter(buf, 0, 0, 4, ' ', 0)
-
-	if _, err = fmt.Fprintln(w, "text\tvisits\ttasks\tsnippets\tupdated_at"); err != nil {
-		panic(err)
-	}
-
-	for _, n := range notes {
-		if _, err = fmt.Fprintln(w, toRow(&n)); err != nil {
-			panic(err)
-		}
-	}
-
-	if err = w.Flush(); err != nil {
-		panic(err)
-	}
-
-	return buf.String()
-}
 
 func getNotes(client *typ3r.Client) (n int, err error) {
 	var batch []typ3r.Note
@@ -81,6 +44,32 @@ func getNotes(client *typ3r.Client) (n int, err error) {
 	return
 }
 
+func toString() string {
+	var err error
+	var buf bytes.Buffer
+	var parsed *template.Template
+
+	termwidth := less.Width()
+	separator := ""
+
+	for i := 0; i < termwidth; i++ {
+		separator += "-"
+	}
+
+	parsed, err = template.New("notes").Parse(
+		fmt.Sprintf("{{range $note := .}}%[1]s\n{{ $note.Text }}\n\n{{end}}", separator))
+
+	if err != nil {
+		panic(err)
+	}
+
+	if err = parsed.Execute(&buf, notes); err != nil {
+		panic(err)
+	}
+
+	return buf.String()
+}
+
 func ls(client *typ3r.Client) error {
 	var err error
 	var n int
@@ -89,7 +78,10 @@ func ls(client *typ3r.Client) error {
 		return err
 	}
 
-	if err = less.Init(nil, ""); err != nil {
+	cfg := lessCfg.New()
+	cfg.Wrap = true
+
+	if err = less.Init(cfg, ""); err != nil {
 		return err
 	}
 
@@ -97,7 +89,7 @@ func ls(client *typ3r.Client) error {
 
 	for {
 		if n != 0 {
-			less.Content(toTable(notes))
+			less.Content(toString())
 		}
 
 		less.Message(fmt.Sprintf("%d notes", len(notes)))

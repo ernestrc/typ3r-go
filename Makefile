@@ -1,26 +1,35 @@
 CC=go
-CFLAGS=build
-TFLAGS=test
 
-REPO=github.com/ernestrc
-PKG=typ3r-go
-EXEC=typ3r
-
+TARGET=bin
+PWD=$(shell pwd)
 SRC=$(wildcard **/*.go)
-EXECDIR=cmd/typ3r
-EXECSRC=$(EXECDIR)/typ3r.go
+PKGS=.
+EXECS=$(sort $(dir $(wildcard cmd/*/)))
+EXECSRC=$(wildcard cmd/**/*.go)
+EXEC=$(patsubst cmd/%/,$(TARGET)/%,$(EXECS))
+GEXEC=$(patsubst cmd/%/,$(GOBIN)/%,$(EXECS))
 
-default: $(EXEC)
 
 .PHONY: clean install
 
-$(EXEC): $(EXECSRC) $(SRC)
-	@ find . -name \*.go | xargs cat | grep github.com | awk -F'"' '{print $$2}' | sort | uniq | xargs -L1 go get
-	cd $(EXECDIR) && $(CC) $(CFLAGS) -o ../../$(EXEC)
+default: $(GEXEC) $(EXEC)
 
-install:
-	$(CC) install $(REPO)/$(PKG)/$(EXECDIR)
+install: $(GEXEC) $(PKGS)
 
 clean:
-	$(CC) clean
-	@- rm -f $(EXEC)
+	@-rm -rf $(TARGET)
+	@-rm $(GEXEC)
+
+$(TARGET):
+	@mkdir $(TARGET)
+
+$(EXEC): $(EXECS) $(EXECSRC) $(SRC) $(TARGET)
+	@cd $< && $(CC) build -o $(PWD)/$(patsubst cmd/%,$(TARGET)/%,$@)
+
+$(PKGS): FORCE
+	@cd $@ && $(CC) install
+
+FORCE:
+
+$(GEXEC): $(EXECS)
+	@cd $< && $(CC) build -o $@
