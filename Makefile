@@ -1,5 +1,9 @@
 CC=go
 
+ifndef GOBIN
+	GOBIN=$(GOPATH)/bin
+endif
+
 TARGET=bin
 PWD=$(shell pwd)
 SRC=$(wildcard **/*.go)
@@ -12,9 +16,9 @@ GEXEC=$(patsubst cmd/%/,$(GOBIN)/%,$(EXECS))
 
 .PHONY: clean install
 
-default: $(GEXEC) $(EXEC)
+default: CHECK $(EXEC)
 
-install: $(GEXEC) $(PKGS)
+install: CHECK $(GEXEC) $(PKGS)
 
 clean:
 	@-rm -rf $(TARGET)
@@ -29,7 +33,12 @@ $(EXEC): $(EXECS) $(EXECSRC) $(SRC) $(TARGET)
 $(PKGS): FORCE
 	@cd $@ && $(CC) install
 
-FORCE:
-
 $(GEXEC): $(EXECS)
 	@cd $< && $(CC) build -o $@
+
+FORCE:
+
+CHECK:
+ifndef GOPATH
+	$(error GOPATH is undefined)
+endif

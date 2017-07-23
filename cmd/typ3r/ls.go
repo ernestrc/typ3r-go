@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"text/template"
 
-	lessCfg "github.com/ernestrc/fractal/config"
 	"github.com/ernestrc/fractal/less"
 	typ3r "github.com/ernestrc/typ3r-go"
 )
@@ -78,7 +77,7 @@ func ls(client *typ3r.Client) error {
 		return err
 	}
 
-	cfg := lessCfg.New()
+	cfg := less.DefaultConfig()
 	cfg.Wrap = true
 
 	if err = less.Init(cfg, ""); err != nil {
