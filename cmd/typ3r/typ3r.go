@@ -16,7 +16,7 @@ var (
 	usage  = `Typ3r Client
 
 Usage:
-  typ3r ls
+  typ3r
   typ3r new
   typ3r -h | --help
   typ3r --version
@@ -37,12 +37,10 @@ func main() {
 
 	client = typ3r.Client{Config: config}
 
-	if args["ls"].(bool) {
-		err = ls(&client)
-	} else if args["new"].(bool) {
+	if args["new"].(bool) {
 		err = newNote(&client)
 	} else {
-		fmt.Println(usage)
+		err = console(&client)
 	}
 
 exit:
